@@ -22,16 +22,26 @@ const mockCatalog: Catalog = {
   products: [],
 };
 
+const mockQueryBuilder = {
+  innerJoin: jest.fn().mockReturnThis(),
+  orderBy: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
+  getManyAndCount: jest.fn(),
+};
+
 const mockCatalogRepo = {
   create: jest.fn(),
   save: jest.fn(),
   findOne: jest.fn(),
   findAndCount: jest.fn(),
   remove: jest.fn(),
+  exist: jest.fn(),
 };
 
 const mockProductRepo = {
   findOne: jest.fn(),
+  createQueryBuilder: jest.fn(() => mockQueryBuilder),
 };
 
 describe('CatalogsService', () => {
@@ -80,15 +90,11 @@ describe('CatalogsService', () => {
   });
 
   describe('assignProduct', () => {
-    it('should assign a product to a catalog', async () => {
-      const catalogWithProducts = { ...mockCatalog, products: [] };
-      const savedCatalog = { ...mockCatalog, products: [mockProduct] };
-
-      mockCatalogRepo.findOne
-        .mockResolvedValueOnce(catalogWithProducts)
-        .mockResolvedValueOnce(savedCatalog);
+    it('should assign a product to a catalog and return updated catalog', async () => {
+      const catalog = { ...mockCatalog, products: [] };
+      mockCatalogRepo.findOne.mockResolvedValue(catalog);
       mockProductRepo.findOne.mockResolvedValue(mockProduct);
-      mockCatalogRepo.save.mockResolvedValue(savedCatalog);
+      mockCatalogRepo.save.mockResolvedValue(catalog);
 
       const result = await service.assignProduct(
         'catalog-uuid-1',
@@ -96,20 +102,22 @@ describe('CatalogsService', () => {
       );
 
       expect(result.products).toHaveLength(1);
-      expect(mockCatalogRepo.save).toHaveBeenCalled();
+      expect(result.products[0].id).toBe(mockProduct.id);
+      expect(mockCatalogRepo.save).toHaveBeenCalledTimes(1);
     });
 
     it('should not duplicate product assignment', async () => {
-      const catalogWithProduct = { ...mockCatalog, products: [mockProduct] };
-      mockCatalogRepo.findOne
-        .mockResolvedValueOnce(catalogWithProduct)
-        .mockResolvedValueOnce(catalogWithProduct);
+      const catalog = { ...mockCatalog, products: [mockProduct] };
+      mockCatalogRepo.findOne.mockResolvedValue(catalog);
       mockProductRepo.findOne.mockResolvedValue(mockProduct);
 
-      await service.assignProduct('catalog-uuid-1', 'product-uuid-1');
+      const result = await service.assignProduct(
+        'catalog-uuid-1',
+        'product-uuid-1',
+      );
 
-      // save should NOT be called since product already in catalog
       expect(mockCatalogRepo.save).not.toHaveBeenCalled();
+      expect(result.products).toHaveLength(1);
     });
 
     it('should throw NotFoundException for missing catalog', async () => {
@@ -134,14 +142,10 @@ describe('CatalogsService', () => {
   });
 
   describe('removeProduct', () => {
-    it('should remove a product from a catalog', async () => {
-      const catalogWithProduct = { ...mockCatalog, products: [mockProduct] };
-      const catalogEmpty = { ...mockCatalog, products: [] };
-
-      mockCatalogRepo.findOne
-        .mockResolvedValueOnce(catalogWithProduct)
-        .mockResolvedValueOnce(catalogEmpty);
-      mockCatalogRepo.save.mockResolvedValue(catalogEmpty);
+    it('should remove a product from a catalog and return updated catalog', async () => {
+      const catalog = { ...mockCatalog, products: [{ ...mockProduct }] };
+      mockCatalogRepo.findOne.mockResolvedValue(catalog);
+      mockCatalogRepo.save.mockResolvedValue(catalog);
 
       const result = await service.removeProduct(
         'catalog-uuid-1',
@@ -149,6 +153,7 @@ describe('CatalogsService', () => {
       );
 
       expect(result.products).toHaveLength(0);
+      expect(mockCatalogRepo.save).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when product not in catalog', async () => {
@@ -159,6 +164,52 @@ describe('CatalogsService', () => {
 
       await expect(
         service.removeProduct('catalog-uuid-1', 'product-uuid-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getCatalogProducts', () => {
+    it('should return paginated products for an existing catalog', async () => {
+      mockCatalogRepo.exist.mockResolvedValue(true);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[mockProduct], 1]);
+
+      const result = await service.getCatalogProducts('catalog-uuid-1', {
+        limit: 10,
+        offset: 0,
+      });
+
+      expect(result.data).toEqual([mockProduct]);
+      expect(result.total).toBe(1);
+      expect(mockProductRepo.createQueryBuilder).toHaveBeenCalledWith('product');
+      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        'product.catalogs',
+        'catalog',
+        'catalog.id = :catalogId',
+        { catalogId: 'catalog-uuid-1' },
+      );
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
+    });
+
+    it('should respect limit and offset', async () => {
+      mockCatalogRepo.exist.mockResolvedValue(true);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 5]);
+
+      const result = await service.getCatalogProducts('catalog-uuid-1', {
+        limit: 2,
+        offset: 3,
+      });
+
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(3);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(2);
+      expect(result.total).toBe(5);
+    });
+
+    it('should throw NotFoundException for non-existent catalog', async () => {
+      mockCatalogRepo.exist.mockResolvedValue(false);
+
+      await expect(
+        service.getCatalogProducts('non-existent', { limit: 10, offset: 0 }),
       ).rejects.toThrow(NotFoundException);
     });
   });

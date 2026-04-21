@@ -21,7 +21,7 @@ import {
 import { CatalogsService } from './catalogs.service';
 import { CreateCatalogDto } from './dto/create-catalog.dto';
 import { UpdateCatalogDto } from './dto/update-catalog.dto';
-import { PaginationDto } from '../products/dto/pagination.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { Catalog } from './entities/catalog.entity';
 import { Product } from '../products/entities/product.entity';
 

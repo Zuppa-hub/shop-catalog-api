@@ -5,7 +5,7 @@ import { Catalog } from './entities/catalog.entity';
 import { Product } from '../products/entities/product.entity';
 import { CreateCatalogDto } from './dto/create-catalog.dto';
 import { UpdateCatalogDto } from './dto/update-catalog.dto';
-import { PaginationDto } from '../products/dto/pagination.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class CatalogsService {
@@ -77,10 +77,7 @@ export class CatalogsService {
       await this.catalogsRepository.save(catalog);
     }
 
-    return this.catalogsRepository.findOne({
-      where: { id: catalogId },
-      relations: ['products'],
-    }) as Promise<Catalog>;
+    return catalog;
   }
 
   async removeProduct(catalogId: string, productId: string): Promise<Catalog> {
@@ -102,10 +99,7 @@ export class CatalogsService {
     catalog.products.splice(productIndex, 1);
     await this.catalogsRepository.save(catalog);
 
-    return this.catalogsRepository.findOne({
-      where: { id: catalogId },
-      relations: ['products'],
-    }) as Promise<Catalog>;
+    return catalog;
   }
 
   async getCatalogProducts(
