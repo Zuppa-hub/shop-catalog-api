@@ -36,7 +36,7 @@ const mockCatalogRepo = {
   findOne: jest.fn(),
   findAndCount: jest.fn(),
   remove: jest.fn(),
-  exist: jest.fn(),
+  count: jest.fn(),
 };
 
 const mockProductRepo = {
@@ -170,7 +170,7 @@ describe('CatalogsService', () => {
 
   describe('getCatalogProducts', () => {
     it('should return paginated products for an existing catalog', async () => {
-      mockCatalogRepo.exist.mockResolvedValue(true);
+      mockCatalogRepo.count.mockResolvedValue(1);
       mockQueryBuilder.getManyAndCount.mockResolvedValue([[mockProduct], 1]);
 
       const result = await service.getCatalogProducts('catalog-uuid-1', {
@@ -180,7 +180,9 @@ describe('CatalogsService', () => {
 
       expect(result.data).toEqual([mockProduct]);
       expect(result.total).toBe(1);
-      expect(mockProductRepo.createQueryBuilder).toHaveBeenCalledWith('product');
+      expect(mockProductRepo.createQueryBuilder).toHaveBeenCalledWith(
+        'product',
+      );
       expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
         'product.catalogs',
         'catalog',
@@ -192,7 +194,7 @@ describe('CatalogsService', () => {
     });
 
     it('should respect limit and offset', async () => {
-      mockCatalogRepo.exist.mockResolvedValue(true);
+      mockCatalogRepo.count.mockResolvedValue(1);
       mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 5]);
 
       const result = await service.getCatalogProducts('catalog-uuid-1', {
@@ -206,7 +208,7 @@ describe('CatalogsService', () => {
     });
 
     it('should throw NotFoundException for non-existent catalog', async () => {
-      mockCatalogRepo.exist.mockResolvedValue(false);
+      mockCatalogRepo.count.mockResolvedValue(0);
 
       await expect(
         service.getCatalogProducts('non-existent', { limit: 10, offset: 0 }),

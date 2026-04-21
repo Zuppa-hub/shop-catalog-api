@@ -6,7 +6,10 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors();
+  // Allow configuring allowed origins via env; defaults to * for open APIs
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN ?? '*',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -16,19 +19,23 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('Shop Catalog API')
-    .setDescription('API for managing shop catalogs and products')
-    .setVersion('1.0')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // Swagger is on by default; set DISABLE_SWAGGER=true to turn it off in prod
+  if (process.env.DISABLE_SWAGGER !== 'true') {
+    const config = new DocumentBuilder()
+      .setTitle('Shop Catalog API')
+      .setDescription('API for managing shop catalogs and products')
+      .setVersion('1.0')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
   console.log(`Application running on port ${port}`);
-  console.log(`Swagger UI available at http://localhost:${port}/api`);
+  if (process.env.DISABLE_SWAGGER !== 'true') {
+    console.log(`Swagger UI available at http://localhost:${port}/api`);
+  }
 }
 bootstrap().catch((error) => {
   console.error(error);

@@ -13,7 +13,8 @@ import { AppController } from './app.controller';
       type: 'sqlite',
       database: process.env.DATABASE_PATH ?? 'shop.sqlite',
       entities: [Product, Catalog],
-      synchronize: true,
+      // synchronize is safe for development/test; production requires migrations
+      synchronize: process.env.NODE_ENV !== 'production',
     }),
     ProductsModule,
     CatalogsModule,

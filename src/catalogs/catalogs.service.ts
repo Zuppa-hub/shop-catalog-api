@@ -108,10 +108,10 @@ export class CatalogsService {
   ): Promise<{ data: Product[]; total: number }> {
     const { limit = 10, offset = 0 } = pagination;
 
-    const catalogExists = await this.catalogsRepository.exist({
+    const catalogCount = await this.catalogsRepository.count({
       where: { id: catalogId },
     });
-    if (!catalogExists) {
+    if (catalogCount === 0) {
       throw new NotFoundException(`Catalog with id "${catalogId}" not found`);
     }
 
