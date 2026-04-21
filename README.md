@@ -165,8 +165,8 @@ npm test            # run all unit tests
 npm run test:cov    # with coverage report
 ```
 
-18 unit tests across `ProductsService` and `CatalogsService`, covering CRUD operations, pagination, product assignment/removal, and all error paths.
+17 unit tests across `ProductsService` and `CatalogsService`, covering CRUD operations, pagination, product assignment/removal, and all error paths.
 
 ## Hosted URL
 
-> Deploy to Railway or Render and update this section with the live URL and Swagger link.
+> Deployment is pending. Add the public app URL and Swagger link here once the service is hosted.

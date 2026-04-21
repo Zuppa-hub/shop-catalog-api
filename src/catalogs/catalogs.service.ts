@@ -114,16 +114,23 @@ export class CatalogsService {
   ): Promise<{ data: Product[]; total: number }> {
     const { limit = 10, offset = 0 } = pagination;
 
-    const catalog = await this.catalogsRepository.findOne({
+    const catalogExists = await this.catalogsRepository.exist({
       where: { id: catalogId },
-      relations: ['products'],
     });
-    if (!catalog) {
+    if (!catalogExists) {
       throw new NotFoundException(`Catalog with id "${catalogId}" not found`);
     }
 
-    const total = catalog.products.length;
-    const data = catalog.products.slice(offset, offset + limit);
+    const [data, total] = await this.productsRepository
+      .createQueryBuilder('product')
+      .innerJoin('product.catalogs', 'catalog', 'catalog.id = :catalogId', {
+        catalogId,
+      })
+      .orderBy('product.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
+
     return { data, total };
   }
 }

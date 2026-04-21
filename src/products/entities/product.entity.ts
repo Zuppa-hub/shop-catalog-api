@@ -8,6 +8,17 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { Catalog } from '../../catalogs/entities/catalog.entity';
 
+const decimalToNumberTransformer = {
+  to: (value: number) => value,
+  from: (value: string | number | null) => {
+    if (value === null) {
+      return value;
+    }
+
+    return typeof value === 'string' ? Number.parseFloat(value) : value;
+  },
+};
+
 @Entity('products')
 export class Product {
   @ApiProperty({ example: 'uuid-v4' })
@@ -23,7 +34,11 @@ export class Product {
   description: string;
 
   @ApiProperty({ example: 999.99 })
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: decimalToNumberTransformer,
+  })
   price: number;
 
   @ApiProperty()
