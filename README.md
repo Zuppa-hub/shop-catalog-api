@@ -88,6 +88,16 @@ npm run start:prod
 The API will be available at `http://localhost:3000`.  
 Swagger UI: `http://localhost:3000/api`
 
+### Environment variables
+
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `NODE_ENV` | `development` | When `production`, disables `synchronize`, runs migrations on startup, requires `CORS_ORIGIN`, hides Swagger unless `ENABLE_SWAGGER=true`. |
+| `PORT` | `3000` | HTTP port. |
+| `DATABASE_PATH` | `shop.sqlite` | Path to the SQLite file. In Docker it is `/app/data/shop.sqlite`. |
+| `CORS_ORIGIN` | — | **Required in production.** Allowed origin(s). In development CORS is open. |
+| `ENABLE_SWAGGER` | `false` in prod | Set to `true` to expose `/api` in production. Always on in development. |
+
 ## Run with Docker
 
 ### Build and start
@@ -163,12 +173,22 @@ No other code changes required.
 ## Tests
 
 ```bash
-npm test            # run all unit tests
-npm run test:cov    # with coverage report
+npm test            # 20 unit tests (services)
+npm run test:cov    # unit tests with coverage report
+npm run test:e2e    # 9 e2e tests (HTTP + in-memory SQLite)
 ```
 
-17 unit tests across `ProductsService` and `CatalogsService`, covering CRUD operations, pagination, product assignment/removal, and all error paths.
+- **Unit tests** (20): `ProductsService` and `CatalogsService` — CRUD, pagination, assignment idempotency, removal, error paths.
+- **E2E tests** (9): boot the full Nest app against an isolated in-memory SQLite, exercise the HTTP layer with `supertest`, including the full assign → list → remove flow and validation error responses.
 
-## Hosted URL
+## Database migrations
 
-> Deployment is pending. Add the public app URL and Swagger link here once the service is hosted.
+Migrations live in `src/database/migrations/` and are managed via the TypeORM CLI.
+
+```bash
+npm run migration:generate    # diff entities vs DB and emit a new migration
+npm run migration:run         # apply pending migrations
+npm run migration:revert      # roll back the last migration
+```
+
+In production (`NODE_ENV=production`) the app runs pending migrations automatically on startup and `synchronize` is disabled. In development the schema is kept in sync with the entities via `synchronize: true`, so you can iterate without running migrations.
