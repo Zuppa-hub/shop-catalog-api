@@ -28,11 +28,13 @@ src/
 ├── main.ts                    # Bootstrap with Swagger + ValidationPipe
 ├── database/
 │   └── seed.ts                # Seed script (12 products, 4 catalogs)
+├── common/
+│   └── dto/
+│       └── pagination.dto.ts
 ├── products/
 │   ├── dto/
 │   │   ├── create-product.dto.ts
-│   │   ├── update-product.dto.ts
-│   │   └── pagination.dto.ts
+│   │   └── update-product.dto.ts
 │   ├── entities/product.entity.ts
 │   ├── products.controller.ts
 │   ├── products.service.ts
