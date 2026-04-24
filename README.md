@@ -2,6 +2,13 @@
 
 A production-ready REST API for managing an electronics shop catalog and products, built with NestJS, TypeORM, and SQLite.
 
+## Live demo
+
+- API base: https://shop-catalog-api.onrender.com
+- Swagger UI: https://shop-catalog-api.onrender.com/api
+
+> Hosted on Render free tier — first request after inactivity may take ~30s (cold start).
+
 ## Features
 
 - Full CRUD for **Products** and **Catalogs**
