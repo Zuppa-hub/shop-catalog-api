@@ -2,14 +2,7 @@ import { DataSource } from 'typeorm';
 import { Product } from '../products/entities/product.entity';
 import { Catalog } from '../catalogs/entities/catalog.entity';
 
-const dataSource = new DataSource({
-  type: 'sqlite',
-  database: process.env.DATABASE_PATH ?? 'shop.sqlite',
-  entities: [Product, Catalog],
-  synchronize: true,
-});
-
-const products = [
+const PRODUCTS = [
   {
     name: 'iPhone 15 Pro',
     description: 'Apple flagship with titanium frame and A17 Pro chip',
@@ -73,7 +66,7 @@ const products = [
   },
 ];
 
-const catalogs = [
+const CATALOGS = [
   {
     name: 'Smartphones',
     description: 'Latest smartphones and mobile devices from top brands',
@@ -93,47 +86,56 @@ const catalogs = [
 ];
 
 // Maps catalog index to product indices (0-based)
-const assignments: Record<number, number[]> = {
-  0: [0, 1, 2], // Smartphones: iPhone, Galaxy, Pixel
-  1: [3, 4, 7], // Laptops: MacBook, Dell XPS, iPad Pro
+const ASSIGNMENTS: Record<number, number[]> = {
+  0: [0, 1, 2],       // Smartphones: iPhone, Galaxy, Pixel
+  1: [3, 4, 7],       // Laptops: MacBook, Dell XPS, iPad Pro
   2: [5, 6, 9, 10, 11], // Accessories: headphones, AirPods, Watch, mouse, hub
   3: [0, 3, 6, 9, 10], // New Arrivals: iPhone, MacBook, AirPods, Watch, mouse
 };
 
-async function seed() {
-  await dataSource.initialize();
-  console.log('Database connection established');
-
+/**
+ * Seeds products and catalogs using an already-initialized DataSource.
+ * Safe to call on an empty DB — does not touch existing data.
+ */
+export async function runSeed(dataSource: DataSource): Promise<void> {
   const productRepo = dataSource.getRepository(Product);
   const catalogRepo = dataSource.getRepository(Catalog);
 
-  // Clear existing data
-  await dataSource.query('DELETE FROM catalog_products');
-  await dataSource.query('DELETE FROM products');
-  await dataSource.query('DELETE FROM catalogs');
-  console.log('Cleared existing data');
+  const savedProducts = await productRepo.save(productRepo.create(PRODUCTS));
+  console.log(`[seed] Inserted ${savedProducts.length} products`);
 
-  // Insert products
-  const savedProducts = await productRepo.save(productRepo.create(products));
-  console.log(`Seeded ${savedProducts.length} products`);
+  const savedCatalogs = await catalogRepo.save(catalogRepo.create(CATALOGS));
+  console.log(`[seed] Inserted ${savedCatalogs.length} catalogs`);
 
-  // Insert catalogs
-  const savedCatalogs = await catalogRepo.save(catalogRepo.create(catalogs));
-  console.log(`Seeded ${savedCatalogs.length} catalogs`);
-
-  // Assign products to catalogs
-  for (const [catalogIdx, productIndices] of Object.entries(assignments)) {
+  for (const [catalogIdx, productIndices] of Object.entries(ASSIGNMENTS)) {
     const catalog = savedCatalogs[parseInt(catalogIdx)];
     catalog.products = productIndices.map((i) => savedProducts[i]);
     await catalogRepo.save(catalog);
   }
-  console.log('Assigned products to catalogs');
-
-  await dataSource.destroy();
-  console.log('Seed completed successfully');
+  console.log('[seed] Assigned products to catalogs');
 }
 
-seed().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
-});
+// CLI entry point: npm run seed
+if (require.main === module) {
+  const dataSource = new DataSource({
+    type: 'sqlite',
+    database: process.env.DATABASE_PATH ?? 'shop.sqlite',
+    entities: [Product, Catalog],
+    synchronize: true,
+  });
+
+  dataSource
+    .initialize()
+    .then(async () => {
+      await dataSource.query('DELETE FROM catalog_products');
+      await dataSource.query('DELETE FROM products');
+      await dataSource.query('DELETE FROM catalogs');
+      await runSeed(dataSource);
+      await dataSource.destroy();
+      console.log('[seed] Done');
+    })
+    .catch((err) => {
+      console.error('[seed] Failed:', err);
+      process.exit(1);
+    });
+}

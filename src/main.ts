@@ -1,7 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
+import { Product } from './products/entities/product.entity';
+import { runSeed } from './database/seed';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -49,6 +52,14 @@ async function bootstrap() {
   console.log(`Application running on port ${port}`);
   if (swaggerEnabled) {
     console.log(`Swagger UI available at http://localhost:${port}/api`);
+  }
+
+  const dataSource = app.get(DataSource);
+  const productCount = await dataSource.getRepository(Product).count();
+  if (productCount === 0) {
+    console.log('[seed] Empty database detected — seeding...');
+    await runSeed(dataSource);
+    console.log('[seed] Seed complete');
   }
 }
 bootstrap().catch((error) => {
